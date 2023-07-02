@@ -1,0 +1,41 @@
+from flask import request
+from packages.Hubi import render
+from application.models.__MODEL__ import __MODEL__
+
+endpoint = "ENDPOINT"
+
+class Resource(ResourcefulTrait):
+    @staticmethod
+    def index():
+        # Add logic to view list of records here. Can view as table or list of cards.
+        ...
+
+    @staticmethod
+    def create():
+        # Add logic for creating a new record or batch of records here.
+        ...
+
+    @staticmethod
+    def view(id):
+        # Add logic to view a specific record here.
+        ...
+
+    @staticmethod
+    def edit(id):
+        # Add logic to edit a specific record here.
+        ...
+
+    @classmethod
+    def handle(self):
+        if request.method == "GET" and not id:
+            return self.index()
+        if request.method == "POST":
+            return self.create()
+        if request.method == "GET" and id:
+            return self.view()
+        if request.method == "POST" and id":
+            return self.edit()
+
+
+def default(id=None):
+    return Resource.handle()

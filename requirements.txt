@@ -1,0 +1,9 @@
+flask
+masonite-orm
+mv-components
+exceptionite
+pyyaml
+beautifulsoup4
+random-password-generator
+currencies
+pywin32

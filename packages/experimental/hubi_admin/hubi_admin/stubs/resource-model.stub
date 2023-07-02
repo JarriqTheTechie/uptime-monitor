@@ -1,0 +1,8 @@
+from masoniteorm.models import Model
+
+from application.admin.$ResourceAdmin import $ResourceAdmin
+
+
+class $Resource(Model, $ResourceAdmin):
+    pass
+

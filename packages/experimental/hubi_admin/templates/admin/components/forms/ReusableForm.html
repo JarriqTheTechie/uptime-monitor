@@ -1,0 +1,25 @@
+{% set field = field %}
+{% set result_set = model %}
+{% set model = model %}
+
+{% if field.type == 'select' %}
+    {% include 'admin/components/forms/Select.html' with context %}
+{% elif field.type == 'file' %}
+    {% include 'admin/components/forms/TextInput.html' with context %}
+{% elif field.type in ["text", "datalist", "date", "datetime-local", "color", "email", "hidden", "month", "number", "password", "range", "search", "tel", "time", "url", "week"] %}
+    {% include 'admin/components/forms/TextInput.html' with context %}
+{% elif field.type == "checkbox" %}
+    {% include 'admin/components/forms/Checkbox.html' with context %}
+{% elif field.type == "radio" %}
+    {% include 'admin/components/forms/Radio.html' with context %}
+{% elif field.type == "toggle" %}
+    {% include 'admin/components/forms/Toggle.html' with context %}
+{% elif field.type == "textarea" %}
+    {% include 'admin/components/forms/Textarea.html' with context %}
+{% elif field.type == "repeater" %}
+    {% include 'admin/components/forms/Repeater.html' with context %}
+{% elif field.type == "live" %}
+    {{ liveflask(field.name)|safe }}
+{% elif field.type == "custom" %}
+    {% include field.view %}
+{% endif %}

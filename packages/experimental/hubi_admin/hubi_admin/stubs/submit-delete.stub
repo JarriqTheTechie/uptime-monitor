@@ -1,0 +1,9 @@
+from packages.experimental.hubi_admin import Admin
+from packages.stable.flask_fs_router import endpoint
+from packages.stable.flask_requester.flask_requester import requester
+
+
+@endpoint(name="Delete $Resource")
+def home(id):
+    admin = Admin()
+    return admin.delete_view("$Resource", id)

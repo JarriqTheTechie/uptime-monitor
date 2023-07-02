@@ -1,0 +1,14 @@
+""" __CLASS__ Model """
+
+from masoniteorm.models import Model
+
+
+class __CLASS__(Model):
+    """__CLASS__ Model"""
+    # __primary_key = "id"
+    # __fillable__ = []
+    __guarded__ = ["id"]
+    # __timestamps__ = False
+    # __hidden__ = []
+    # __visible__ = []
+    pass

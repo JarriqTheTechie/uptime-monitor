@@ -1,0 +1,18 @@
+admin:
+  url:
+    production: "http://localhost:5000"
+    development: "http://localhost:5000"
+  admin_title: "Archy"
+  admin_header: "Manage archival processes in place."
+  admin_site_title: "Archy"
+  admin_logo: "/static/logo.svg"
+  login_short_text: ""
+  ldap_domain: "EQUITY.LOCAL"
+
+web:
+  url:
+    production: "http://localhost:5000"
+    development: "http://localhost:5000"
+  web_title: "SAAS"
+  web_header: "SAAS Template"
+  web_site_title: "SAAS Web App"

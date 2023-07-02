@@ -1,0 +1,47 @@
+{% if model_key(result_set, field.name) %}
+    {% set value = model_key(result_set, field.name) %}
+{% else %}
+    {% set value = None %}
+{% endif %}
+
+
+{% if get_type(field.options) == "str" %}
+    {% set options = value %}
+{% else %}
+    {% set options = field.options %}
+{% endif %}
+
+
+{% if get_type(options) == "Collection" %}
+    {% set options_type = "Collection" %}
+{% else %}
+    {% set options_type = "list" %}
+{% endif %}
+
+
+{% if field.colspan %}
+    {% set colspan = "col-lg-" + field.colspan %}
+{% else %}
+    {% set colspan = "col-lg-4" %}
+{% endif %}
+
+
+<div class="form-group {{ colspan }} mt-3">
+    <label for="">{{ field.label }}</label>
+    <select
+    {% include 'admin/components/forms/FieldAttributes.html' with context %}
+    >
+    {% if options %}
+        {% for option in options %}
+            {% if options_type == "list" %}
+                <option value='{{ option }}' {% if option == value %}selected{% endif %}>{{ option }}</option>
+            {% elif options_type == "Collection" %}
+                <option value='{{ model_key(option, field.id_key) }}'
+                        {% if model_key(option, field.id_key) == value %}selected{% endif %}>{{ model_key(option, field.value_key) }}</option>
+            {% endif %}
+        {% endfor %}
+    {% else %}
+        <option value=''>No options</option>
+    {% endif %}
+    </select>
+</div>

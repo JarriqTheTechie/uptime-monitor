@@ -1,0 +1,141 @@
+{% set resource=data_model.resource[0].name %}
+{% set id=id %}
+{% set model=result_set %}
+{% set edit_actions=edit_actions %}
+{% set resource_pluralized = pluralize(resource)|lower %}
+{% set resource_singularized = singularize(resource)|lower %}
+
+
+<script>
+    document.querySelectorAll('#preview-mode input, #preview-mode select, #preview-mode button, #preview-mode textarea').forEach(function (element) {
+        element.setAttribute('disabled', 'disabled');
+    });
+</script>
+
+<div id="preview-mode" class='row'>
+    {% for field in fields %}
+        {% if field.type != 'repeater' %}
+            {% include 'admin/components/forms/ReusableForm.html' %}
+        {% endif %}
+    {% endfor %}
+    <button id='edit-{{ resource_singularized }}-form-submit-btn' type="submit" class="btn btn-primary d-none">
+        Submit
+    </button>
+</div>
+
+
+<div id='repeater-area' data-hx-swap-oob="true">
+    {% for field in fields %}
+        {% if field.type == "repeater" %}
+            <br>
+            <hr>
+            <mv-admin.components.forms.Repeater id={{ id }} model={{ model }}
+                                                field={{ field }} result_set={{ result_set }}></mv-admin.components.forms.Repeater>
+        {% endif %}
+    {% endfor %}
+</div>
+
+
+
+{% if relations %}
+    {% for relation_ in relations %}
+        <div id="tableCheckbox"
+             class="bg-white border-top border-200 position-relative top-1 mt-5">
+
+            <div class="card-body p-0">
+                <div class="p4 code-to-copy">
+                    <div class="table-list">
+                        {% if get_type(relation_) == 'str' %}
+                            {% set relation = {
+                                "name": relation_,
+                                "heading": pluralize(relation_)|replace("_", " ")|title,
+                                "description": relation_,
+                                "class_": relation_.title()
+                            } %}
+                        {% else %}
+                            {% set relation = relation_ %}
+                        {% endif %}
+                        <h4 class="pt-7">{{ pluralize(relation.heading)|replace("_", " ")|title }}</h4>
+                        <div class="table-responsive scrollbar mb-3" id='relationship-{{ relation.name }}-table'>
+                            {% if not model_key(result_set, relation.name) %}
+                                <p class='text-center mb-0 p-5'>No {{ pluralize(relation.name) }} to display</p>
+                            {% else %}
+                                <table id='{{ singularize(relation.name).title() }}-table'
+                                       class="table table-sm fs--1 mb-0 overflow-hidden">
+                                    <thead class="text-900">
+                                    <tr>
+                                        {% for field in get_class(singularize(relation.class_))().get_table_columns() %}
+                                            <mv-admin.components.table.table-head
+                                                    field={{ field }}></mv-admin.components.table.table-head>
+                                        {% endfor %}
+                                        <th>
+
+                                        </th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for answer in model_key(result_set, relation.name) %}
+                                        {% set relation_table_fields = get_class(singularize(relation.class_))().get_table_columns() %}
+                                        <tr id="result-{{ relation.name|lower }}-{{ answer.id }}">
+                                            {% for field in relation_table_fields %}
+                                                <mv-admin.components.table.table-row relationship=True
+                                                                                     resource={{ relation.name }} field={{ field }}
+                                                                                     fields={{ relation_table_fields }} result={{ answer }}></mv-admin.components.table.table-row>
+                                            {% endfor %}
+                                            <td class="align-middle white-space-nowrap text-end pe-0 ps-4 btn-reveal-trigger"
+                                                data-hx-preserve="true"
+                                                id="{{ relation.name }}-table-actions-group-{{ answer.id }}">
+                                                <button class="btn btn-sm dropdown-toggle dropdown-caret-none transition-none btn-reveal fs--2"
+                                                        type="button" data-bs-toggle="dropdown"
+                                                        data-boundary="window"
+                                                        aria-haspopup="true" aria-expanded="false"
+                                                        data-bs-reference="parent">
+                                                    <svg class="svg-inline--fa fa-ellipsis fs--2" aria-hidden="true"
+                                                         focusable="false" data-prefix="fas" data-icon="ellipsis"
+                                                         role="img"
+                                                         xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"
+                                                         data-fa-i2svg="">
+                                                        <path fill="currentColor"
+                                                              d="M120 256C120 286.9 94.93 312 64 312C33.07 312 8 286.9 8 256C8 225.1 33.07 200 64 200C94.93 200 120 225.1 120 256zM280 256C280 286.9 254.9 312 224 312C193.1 312 168 286.9 168 256C168 225.1 193.1 200 224 200C254.9 200 280 225.1 280 256zM328 256C328 225.1 353.1 200 384 200C414.9 200 440 225.1 440 256C440 286.9 414.9 312 384 312C353.1 312 328 286.9 328 256z"></path>
+                                                    </svg>
+                                                    <!-- <span class="fas fa-ellipsis-h fs--2"></span> Font Awesome fontawesome.com -->
+                                                </button>
+                                                <div class="dropdown-menu dropdown-menu-end py-2" style=""><a
+                                                        class="dropdown-item" href="#!">View</a><a
+                                                        class="dropdown-item"
+                                                        href="/admin/{{ pluralize(relation.name)|lower }}/{{ answer[model.get_primary_key()] }}">Edit</a>
+                                                    <div class="dropdown-divider"></div>
+                                                    <a class="dropdown-item text-danger"
+                                                       data-hx-get="/admin/{{ pluralize(relation.class_)|lower }}/{{ answer[model.get_primary_key()] }}/delete"
+                                                       data-hx-confirm="Are you sure you want to delete this {{ singularize(relation.name)|lower }}?"
+                                                       data-hx-target="#result-{{ relation.name|lower }}-{{ answer[model.get_primary_key()] }}"
+                                                       data-hx-swap="outerHTML"
+                                                       href="#!">Remove</a>
+                                                </div>
+
+
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            {% endif %}
+                        </div>
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+{% endif %}
+
+{% if edit_actions %}
+    {% for action in edit_actions %}
+        <mv-{{ action.view }} resource="{{ resource }}" id="{{ id }}"
+                              edit_action="{{ action.name }}"></mv-{{ action.view }}>
+    {% endfor %}
+{% endif %}
+
+
+

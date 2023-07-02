@@ -1,0 +1,402 @@
+{% extends 'components/layouts/BaseLayoutAdmin.html' %}
+{% set models=data_model.models %}
+{% set resource=data_model.resource[0].name %}
+{% set page_title=page_title|replace("_", " ") %}
+{% set table_actions = table_actions %}
+
+{% block content scoped %}
+
+
+    {% if model.table_polling %}
+        <div id="table-poller"
+             data-hx-trigger="every {{ model.table_polling_interval }}s"
+             data-hx-target="#{{ resource }}-table"
+             data-hx-select="#{{ resource }}-table"
+             data-hx-get="{{ query_param_string }}"
+             data-hx-swap="outerHTML"
+             data-hx-swap-oob="true"
+        ></div>
+    {% endif %}
+
+
+    {% if header_metrics %}
+        <div id="{{ resource }}-metric-top" class="row">
+            <div class="col-xl-12 col-xxl-12">
+                <div class="card mb-5">
+                    <div class="card-body">
+                        <div class="row g-4 g-xl-1 g-xxl-3 ">
+                            {% for metric in model().get_header_metrics() %}
+                                <div class="col-sm-auto">
+                                    <div class="d-sm-block d-inline-flex d-md-flex flex-xl-column flex-xxl-row align-items-center align-items-xl-start align-items-xxl-center border-end-sm ps-sm-5  pe-3 ps-0">
+                                        {% if metric.icon %}
+                                            <div class="d-flex rounded flex-center me-3 mb-sm-3 mb-md-0 mb-xl-3 mb-xxl-0"
+                                                 style="width:32px; height:32px; background-color: {{ metric.icon_bg_color }}">
+                                                <i class="fa {{ metric.icon }}"
+                                                   style="color: {{ metric.icon_color }} !important;"></i>
+                                            </div>
+                                        {% endif %}
+                                        <div>
+                                            <p class="fw-bold mb-1">{{ metric.heading or metric.name }}</p>
+                                            <h4 class="fw-bolder text-nowrap">{{ metric.value }}</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+
+    <div class="mb-4">
+        <div class="row mt-4">
+            <div class='col-lg-3'>
+                <div class="form-group">
+                    <input type="text"
+                           class="form-control" name="search" id=""
+                            {#                                   onkeydown='let qry = this.value; if (qry === "") {qry=" "} if (event.keyCode  === 13) { location.href = `{{ query_param_string }}&search=` + qry + `&page=1` }'#}
+                           data-hx-trigger="keyup changed delay:500ms"
+                           data-hx-get="{{ request.path }}"
+                           data-hx-target="#{{ resource }}-table"
+                           data-hx-swap="outerHTML"
+                           data-hx-select="#{{ resource }}-table"
+                           hx-push-url="true"
+                           value='{{ search_query }}'
+                           aria-describedby="helpId"
+                           placeholder="Search {{ pluralize(resource)|lower }} by {% if get_type(model().__admin_search_field__) == "list" %}{{ titleize(', '.join(model().__admin_search_field__)) }}{% else %}{{ titleize(model().__admin_search_field__) }}{% endif %}......">
+                </div>
+            </div>
+            <div class='col-lg-2'>
+                <div class="form-group">
+                    <select class="form-select" name="" id=""
+                            onchange='location = `{{ query_param_string + "&filter=" }}` + this.value + `&page=1`'
+                    >
+                        <option>Order By</option>
+                        {% if get_type('ass') == "str" %}
+                            <option {% if request_filters == "asc" %}selected{% endif %}>asc</option>
+                            <option {% if request_filters == "desc" %}selected{% endif %}>desc</option>
+                        {% endif %}
+
+                    </select>
+                </div>
+            </div>
+
+            <div class="col-lg-2">
+                <button class="btn px-3 btn-phoenix-secondary" type="button" data-bs-toggle="modal"
+                        data-bs-target="#reportsFilterModal" aria-haspopup="true" aria-expanded="false"
+                        data-bs-reference="parent">
+                    <svg class="svg-inline--fa fa-filter text-primary" data-fa-transform="down-3" aria-hidden="true"
+                         focusable="false" data-prefix="fas" data-icon="filter" role="img"
+                         xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""
+                         style="transform-origin: 0.5em 0.6875em;">
+                        <g transform="translate(256 256)">
+                            <g transform="translate(0, 96)  scale(1, 1)  rotate(0 0 0)">
+                                <path fill="currentColor"
+                                      d="M3.853 54.87C10.47 40.9 24.54 32 40 32H472C487.5 32 501.5 40.9 508.1 54.87C514.8 68.84 512.7 85.37 502.1 97.33L320 320.9V448C320 460.1 313.2 471.2 302.3 476.6C291.5 482 278.5 480.9 268.8 473.6L204.8 425.6C196.7 419.6 192 410.1 192 400V320.9L9.042 97.33C-.745 85.37-2.765 68.84 3.854 54.87L3.853 54.87z"
+                                      transform="translate(-256 -256)"></path>
+                            </g>
+                        </g>
+                    </svg>
+                    <!-- <span class="fa-solid fa-filter text-primary" data-fa-transform="down-3"></span> Font Awesome fontawesome.com -->
+                </button>
+            </div>
+
+            <div class="modal fade" id="reportsFilterModal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border">
+                        <form id="addEventForm" autocomplete="off">
+                            <div class="modal-header border-200 p-4">
+                                <h5 class="modal-title text-1000 fs-2 lh-sm">Filter</h5>
+                                <button class="btn p-1 text-900" type="button" data-bs-dismiss="modal"
+                                        aria-label="Close">
+                                    <svg class="svg-inline--fa fa-xmark fs--1" aria-hidden="true" focusable="false"
+                                         data-prefix="fas" data-icon="xmark" role="img"
+                                         xmlns="http://www.w3.org/2000/svg"
+                                         viewBox="0 0 320 512" data-fa-i2svg="">
+                                        <path fill="currentColor"
+                                              d="M310.6 361.4c12.5 12.5 12.5 32.75 0 45.25C304.4 412.9 296.2 416 288 416s-16.38-3.125-22.62-9.375L160 301.3L54.63 406.6C48.38 412.9 40.19 416 32 416S15.63 412.9 9.375 406.6c-12.5-12.5-12.5-32.75 0-45.25l105.4-105.4L9.375 150.6c-12.5-12.5-12.5-32.75 0-45.25s32.75-12.5 45.25 0L160 210.8l105.4-105.4c12.5-12.5 32.75-12.5 45.25 0s12.5 32.75 0 45.25l-105.4 105.4L310.6 361.4z"></path>
+                                    </svg>
+                                    <!-- <span class="fas fa-times fs--1"> 				</span> Font Awesome fontawesome.com -->
+                                </button>
+                            </div>
+                            <div class="modal-body pt-4 pb-2 px-4">
+                                {% if table_filters %}
+                                    {% for filter in table_filters %}
+                                        <div class="form-group">
+                                            <label for="">{% if filter.label %}{{ filter.label }}{% else %}
+                                                {{ filter.name }}{% endif %}</label>
+                                            <input type="text" name="" id="" class="form-control" placeholder=""
+                                                   aria-describedby="helpId">
+                                        </div>
+
+                                        <br>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="text-center">No filters available</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="modal-footer d-flex justify-content-end align-items-center px-4 pb-4 border-0 pt-3">
+                                <button class="btn btn-sm btn-phoenix-primary px-4 fs--2 my-0" type="submit">
+                                    <svg class="svg-inline--fa fa-arrows-rotate me-2 fs--2" aria-hidden="true"
+                                         focusable="false" data-prefix="fas" data-icon="arrows-rotate" role="img"
+                                         xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg="">
+                                        <path fill="currentColor"
+                                              d="M464 16c-17.67 0-32 14.31-32 32v74.09C392.1 66.52 327.4 32 256 32C161.5 32 78.59 92.34 49.58 182.2c-5.438 16.81 3.797 34.88 20.61 40.28c16.89 5.5 34.88-3.812 40.3-20.59C130.9 138.5 189.4 96 256 96c50.5 0 96.26 24.55 124.4 64H336c-17.67 0-32 14.31-32 32s14.33 32 32 32h128c17.67 0 32-14.31 32-32V48C496 30.31 481.7 16 464 16zM441.8 289.6c-16.92-5.438-34.88 3.812-40.3 20.59C381.1 373.5 322.6 416 256 416c-50.5 0-96.25-24.55-124.4-64H176c17.67 0 32-14.31 32-32s-14.33-32-32-32h-128c-17.67 0-32 14.31-32 32v144c0 17.69 14.33 32 32 32s32-14.31 32-32v-74.09C119.9 445.5 184.6 480 255.1 480c94.45 0 177.4-60.34 206.4-150.2C467.9 313 458.6 294.1 441.8 289.6z"></path>
+                                    </svg>
+                                    <!-- <span class="fas fa-arrows-rotate me-2 fs--2"></span> Font Awesome fontawesome.com -->
+                                    Reset
+                                </button>
+                                <button class="btn btn-sm btn-primary px-9 fs--2 my-0" type="submit">Done</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+
+    <div id="tableCheckbox"
+         class="mx-n4 px-4 mx-lg-n6 px-lg-6 bg-white border-top border-bottom border-200 position-relative top-1">
+
+        <div class="card-body p-0">
+
+            <div class="p-4 code-to-copy">
+                <div class="table-list">
+                    <div class="table-responsive scrollbar mb-3">
+                        <table id='{{ resource }}-table' class="table table-sm fs--1 mb-0 overflow-hidden">
+                            <thead class="text-900">
+                            <tr>
+                                {#                        <th class="checkbox-area" scope="col">#}
+                                {#                            <div class="form-check form-check-primary">#}
+                                {#                                <input class="form-check-input" id="checkbox_parent_all" type="checkbox">#}
+                                {#                            </div>#}
+                                {#                        </th>#}
+
+                                {% for field in fields %}
+                                    {% include 'admin/components/table/table-head.html' %}
+                                {% endfor %}
+                                <th>
+
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody>
+
+                            {% for result in result_set %}
+                                <tr id="result-{{ resource|lower }}-{{ result.id }}">
+                                    {% for field in fields %}
+                                        {% include 'admin/components/table/table-row.html' %}
+                                    {% endfor %}
+
+                                    <td class="align-middle white-space-nowrap text-end pe-0 ps-4 btn-reveal-trigger"
+                                        data-hx-preserve="true">
+                                        <div class="font-sans-serif btn-reveal-trigger position-static">
+                                            <button class="btn btn-sm dropdown-toggle dropdown-caret-none transition-none btn-reveal fs--2"
+                                                    type="button" data-bs-toggle="dropdown" data-boundary="window"
+                                                    aria-haspopup="true" aria-expanded="false"
+                                                    data-bs-reference="parent">
+                                                <svg class="svg-inline--fa fa-ellipsis fs--2" aria-hidden="true"
+                                                     focusable="false" data-prefix="fas" data-icon="ellipsis" role="img"
+                                                     xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"
+                                                     data-fa-i2svg="">
+                                                    <path fill="currentColor"
+                                                          d="M120 256C120 286.9 94.93 312 64 312C33.07 312 8 286.9 8 256C8 225.1 33.07 200 64 200C94.93 200 120 225.1 120 256zM280 256C280 286.9 254.9 312 224 312C193.1 312 168 286.9 168 256C168 225.1 193.1 200 224 200C254.9 200 280 225.1 280 256zM328 256C328 225.1 353.1 200 384 200C414.9 200 440 225.1 440 256C440 286.9 414.9 312 384 312C353.1 312 328 286.9 328 256z"></path>
+                                                </svg>
+                                                <!-- <span class="fas fa-ellipsis-h fs--2"></span> Font Awesome fontawesome.com -->
+                                            </button>
+                                            <div class="dropdown-menu dropdown-menu-end py-2" style="">
+                                                {% if table_actions %}
+                                                    {% for action in table_actions %}
+                                                        <a class="dropdown-item"
+                                                                {% if not action.schema %}
+                                                           href="#!"
+                                                           data-hx-post="/mvlive/{{ resource }}"
+                                                           data-hx-vals='{"method": "{{ action.name }}", "args": "{{ result.id }}", "data": "ACTION_DATA"}'
+                                                           data-hx-target="#result-{{ resource|lower }}-{{ result.id }}"
+                                                           data-hx-select="#result-{{ resource|lower }}-{{ result.id }}"
+                                                           data-hx-swap="outerHTML"
+                                                                {% endif %}
+                                                                {% if action.schema %}
+                                                           data-bs-toggle="modal"
+                                                           data-bs-target="#action-{{ action.name }}-resource-{{ result.id }}"
+                                                                {% endif %}
+                                                        >
+                                                            {% if action.label %}
+                                                                {{ render_dynamic_html(action.label, result=result)|safe }}{% else %}
+                                                                {{ action.name }}{% endif %}
+                                                        </a>
+
+                                                        {% if action.schema %}
+                                                            <div class="modal fade modal-md"
+                                                                 id="action-{{ action.name }}-resource-{{ result.id }}"
+                                                                 tabindex="-1"
+                                                                 data-bs-backdrop="static"
+                                                                 aria-hidden="true">
+                                                                <div class="modal-dialog">
+                                                                    <div class="modal-content">
+                                                                        <div class="modal-header">
+                                                                            <h5 class="modal-title"
+                                                                                id="exampleModalLabel">
+                                                                                {{ render_dynamic_html(action.label, result=result)|safe }}
+                                                                            </h5>
+                                                                            <button class="btn p-1" type="button"
+                                                                                    data-bs-dismiss="modal"
+                                                                                    aria-label="Close">
+                                                                                <span class="fas fa-times fs--1"></span>
+                                                                            </button>
+                                                                        </div>
+                                                                        <div class="modal-body">
+                                                                            <form id="action-{{ action.name }}-resource-{{ result.id }}-form"
+                                                                                  class='row'
+                                                                                  data-hx-post="/mvlive/{{ resource }}"
+                                                                                  data-hx-vals='js:{"method": "{{ action.name }}", "args": "{{ result.id }}"}'
+                                                                                  _="on htmx:afterOnLoad call hideModal('#action-{{ action.name }}-resource-{{ result.id }}')"
+                                                                                  data-hx-target="#result-{{ resource|lower }}-{{ result.id }}"
+                                                                                  data-hx-select="#result-{{ resource|lower }}-{{ result.id }}"
+                                                                                  data-hx-swap="outerHTML"
+                                                                            >
+                                                                                {% for field in action.schema %}
+                                                                                    {% if field.type != 'repeater' %}
+                                                                                        {% include 'admin/components/forms/ReusableForm.html' with context %}
+                                                                                    {% endif %}
+                                                                                {% endfor %}
+                                                                                <div class="col-12">
+                                                                                    <button class="btn btn-primary float-end mt-5"
+                                                                                            type="submit">
+                                                                                        Run Action
+                                                                                    </button>
+                                                                                </div>
+                                                                            </form>
+                                                                        </div>
+
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                    <div class="dropdown-divider"></div>
+                                                {% endif %}
+
+                                                <a class="dropdown-item" href="#!">View</a>
+                                                <a class="dropdown-item"
+                                                   href="/admin/{{ pluralize(resource)|lower }}/{{ result[model.get_primary_key()] }}">Edit</a>
+                                                <div class="dropdown-divider"></div>
+                                                <a class="dropdown-item text-danger"
+                                                   data-hx-get="/admin/{{ pluralize(resource)|lower }}/{{ result[model.get_primary_key()] }}/delete"
+                                                   data-hx-confirm="Are you sure you want to delete this {{ resource|lower }}?"
+                                                   data-hx-target="#result-{{ resource|lower }}-{{ result[model.get_primary_key()] }}"
+                                                   data-hx-swap="outerHTML"
+                                                   href="#!">Remove</a>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {% set per_page = data_model.get('resource')[0]['pagination']['per_page'] %}
+                <select class="form-select mt-5" name="per_page" id=""
+                        data-hx-get='{{ query_param_string }}'
+                        data-hx-trigger="change"
+                        data-hx-select='#{{ resource }}-table'
+                        data-hx-target='#{{ resource }}-table'
+                        data-hx-replace-url="true"
+                        style='position: absolute; bottom: 0; right: 0; width: 6%; margin-bottom: 15px; margin-right: 20px;'
+                >
+
+                    {% if per_page not in [5, 15, 25, 50, 75, 100] %}
+                        <option selected value="{{ per_page }}">{{ per_page }}</option>
+                    {% endif %}
+                    <option {% if per_page == 5 %}selected{% endif %}>5</option>
+                    <option {% if per_page == 15 %}selected{% endif %}>15</option>
+                    <option {% if per_page == 25 %}selected{% endif %}>25</option>
+                    <option {% if per_page == 50 %}selected{% endif %}>50</option>
+                    <option {% if per_page == 75 %}selected{% endif %}>75</option>
+                    <option {% if per_page == 100 %}selected{% endif %}>100</option>
+                </select>
+
+
+                <div class="{% if result_set.count == 0 %}opacity-0 {% endif %} btn-group mt-5" id="pagination"
+                     data-hx-swap-oob="true" aria-label="Page navigation example">
+
+                    {% if result_set.previous_page %}
+                        <a name="" id=""
+                           class="page-link btn btn-secondary {% if result_set.current_page|int == pagination['page']|int %}active{% endif %}"
+                           data-hx-get="{{ query_param_string }}&page={{ result_set.previous_page }}"
+                           data-hx-select="#{{ resource }}-table"
+                           data-hx-target="#{{ resource }}-table"
+                           data-hx-replace-url="true"
+                           role="button"><span
+                                class="fas fa-chevron-left"></span></a>
+                    {% endif %}
+
+                    {% if result_set.current_page|int == pagination['page']|int %}
+                        <a name="" id=""
+                           class="page-link btn btn-secondary {% if result_set.current_page|int == pagination['page']|int %}active{% endif %}"
+                           data-hx-get="{{ query_param_string }}&page={{ result_set.current_page }}"
+                           data-hx-select="#{{ resource }}-table"
+                           data-hx-target="#{{ resource }}-table"
+                           data-hx-replace-url="true"
+                           role="button">{{ result_set.current_page }}</a>
+                    {% endif %}
+
+                    {% if result_set.has_more_pages() %}
+                        <a name="" id=""
+                           class="page-link btn btn-secondary {% if result_set.current_page|int == pagination['page']|int %}active{% endif %}"
+                           data-hx-get="{{ query_param_string }}&page={{ result_set.next_page }}"
+                           data-hx-select="#{{ resource }}-table"
+                           data-hx-target="#{{ resource }}-table"
+                           data-hx-replace-url="true"
+                           role="button"><span
+                                class="fas fa-chevron-right"></span></a>
+                    {% endif %}
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+
+
+    {% if model().preview_field %}
+        <div class="modal fade modal-xl" id="preview-modal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">{{ resource }} Preview</h5>
+                        <button class="btn p-1" type="button" data-bs-dismiss="modal" aria-label="Close"><span
+                                class="fas fa-times fs--1"></span></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-700 lh-lg mb-0">This is a static modal example (meaning its position and display
+                            have
+                            been overridden). Included are the modal header, modal body (required for padding), and
+                            modal
+                            footer (optional). </p>
+                    </div>
+                    <div class="modal-footer border-0 d-none">
+                        <button class="btn btn-primary" type="button">Okay</button>
+                        <button class="btn btn-outline-primary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <div id="modal-containers">
+
+    </div>
+
+
+
+{% endblock %}

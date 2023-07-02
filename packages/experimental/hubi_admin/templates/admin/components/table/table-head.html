@@ -1,0 +1,16 @@
+{% if field.label %}
+    {% set label = field.label %}
+{% else %}
+    {% set label = field.name %}
+{% endif %}
+
+
+{% if label|lower == "id" %}
+    <th class="sort pe-1 align-middle white-space-nowrap">
+        {{ field }}
+    </th>
+{% else %}
+    <th class="sort pe-1 align-middle white-space-nowrap">
+        {{ label }}
+    </th>
+{% endif %}
